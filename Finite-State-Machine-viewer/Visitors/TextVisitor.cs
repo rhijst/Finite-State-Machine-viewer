@@ -9,7 +9,7 @@ public class TextVisitor : IVisitor
     private FiniteStateMachine? _fsm;
     private int _indent;
 
-    private const int LineWidth = 70;
+    private const int SeparatorWidth = 70;
 
     public TextVisitor(TextWriter output)
     {
@@ -23,20 +23,23 @@ public class TextVisitor : IVisitor
         WriteSeparator('#');
         _output.WriteLine($"# Diagram: {fsm.Name}");
         WriteSeparator('#');
+        _output.WriteLine();
+        _indent = 1;
     }
 
     public void EndFsm(FiniteStateMachine fsm) { }
 
     public void Visit(InitialState state)
     {
-        _output.WriteLine($"{Pad()}(O) {state.Name}");
-        WriteOutgoingTransitions(state);
+        _output.WriteLine($"{Pad()}O Initial state ({state.Name})");
+        _output.WriteLine();
+        WriteTransitions(state, trailingBlankLine: true);
     }
 
     public void Visit(FinalState state)
     {
-        WriteOutgoingTransitions(state);
-        _output.WriteLine($"{Pad()}[O] {state.Name}");
+        _output.WriteLine();
+        _output.WriteLine($"{Pad()}(O) Final state ({state.Name})");
     }
 
     public void Visit(SimpleState state)
@@ -45,7 +48,7 @@ public class TextVisitor : IVisitor
         _output.WriteLine($"{Pad()}| {state.Name}");
         WriteSeparator('-');
         WriteActions(state);
-        WriteOutgoingTransitions(state);
+        WriteTransitions(state, trailingBlankLine: true);
     }
 
     public void Visit(CompoundState state)
@@ -54,21 +57,31 @@ public class TextVisitor : IVisitor
         _output.WriteLine($"{Pad()}|| Compound state: {state.Name}");
         WriteSeparator('-');
         WriteActions(state);
+        _output.WriteLine();
 
-        _indent += 2;
+        _indent++;
         foreach (var child in state.Children)
             child.Accept(this);
-        _indent -= 2;
+        _indent--;
 
         WriteSeparator('=');
-        WriteOutgoingTransitions(state);
+        // Transitions from compound have no trailing blank line (Final state follows directly)
+        WriteTransitions(state, trailingBlankLine: false);
     }
 
     public void Visit(Transition transition)
     {
-        var label = transition.GetLabel();
-        var dest = transition.Destination.Name;
-        _output.WriteLine($"{Pad()}---{label}---> {dest}");
+        _output.WriteLine($"{Pad()}---{transition.GetLabel()}---> {transition.Destination.Name}");
+    }
+
+    private void WriteTransitions(State state, bool trailingBlankLine)
+    {
+        if (_fsm is null) return;
+        foreach (var t in _fsm.GetOutgoingTransitions(state))
+        {
+            Visit(t);
+            if (trailingBlankLine) _output.WriteLine();
+        }
     }
 
     private void WriteActions(State state)
@@ -79,19 +92,13 @@ public class TextVisitor : IVisitor
             _output.WriteLine($"{Pad()}| Do / {a.Description}");
         foreach (var a in state.ExitActions)
             _output.WriteLine($"{Pad()}| On Exit / {a.Description}");
+
         if (state.EntryActions.Any() || state.DoActions.Any() || state.ExitActions.Any())
             WriteSeparator('-');
     }
 
-    private void WriteOutgoingTransitions(State state)
-    {
-        if (_fsm is null) return;
-        foreach (var t in _fsm.GetOutgoingTransitions(state))
-            Visit(t);
-    }
-
     private void WriteSeparator(char ch) =>
-        _output.WriteLine(Pad() + new string(ch, LineWidth - _indent * 2));
+        _output.WriteLine(Pad() + new string(ch, SeparatorWidth));
 
     private string Pad() => new(' ', _indent * 2);
 }
