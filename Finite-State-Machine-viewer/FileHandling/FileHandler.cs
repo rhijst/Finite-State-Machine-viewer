@@ -15,12 +15,20 @@ public class FileHandler
         _validator = validator;
     }
 
-    public CustomFile LoadFile(string path) => _reader.Read(path);
+    public CustomFile LoadFile(string path)
+    {
+        return _reader.Read(path);
+    }
 
-    public CustomFile LoadFile(string path, string file, string extension = ".fsm") =>
-        _reader.Read(System.IO.Path.Combine(path, file + extension));
+    public CustomFile LoadFile(string path, string file, string extension = ".fsm")
+    {
+        return _reader.Read(System.IO.Path.Combine(path, file + extension));
+    }
 
-    public bool ValidateFileContent(string content) => _validator.Validate(content);
+    public bool ValidateFileContent(string content)
+    {
+        return _validator.Validate(content);
+    }
 
     public IEnumerable<string> GetValidationErrors() => _validator.GetErrors();
 
@@ -30,8 +38,7 @@ public class FileHandler
     {
         var file = LoadFile(path);
         if (!ValidateFileContent(file.Content))
-            throw new InvalidOperationException(
-                "File validation failed:\n" + string.Join("\n", GetValidationErrors()));
+            throw new InvalidOperationException("File validation failed:\n" + string.Join("\n", GetValidationErrors()));
         return InterpretFileContent(file);
     }
 }

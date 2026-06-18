@@ -7,9 +7,9 @@ public class DeterministicValidator : IFSMValidator
 {
     public ValidationResult Validate(FiniteStateMachine fsm)
     {
-        var result = new ValidationResult();
+        ValidationResult result = new ValidationResult();
 
-        foreach (var state in fsm.States)
+        foreach (State state in fsm.States)
         {
             var outgoing = fsm.GetOutgoingTransitions(state).ToList();
             if (outgoing.Count <= 1) continue;

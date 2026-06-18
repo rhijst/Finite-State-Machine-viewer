@@ -2,6 +2,7 @@ using FSM.Builders;
 using FSM.FileHandling.DTO;
 using FSM.Model;
 using FSM.Model.States;
+using System.Collections.Generic;
 using Action = FSM.Model.Action;
 
 namespace FSM.Factory;
@@ -28,45 +29,63 @@ public class FSMFactory
     {
         var groups = new Dictionary<string, (List<Action>, List<Action>, List<Action>, List<Action>)>();
 
-        foreach (var actionDto in dto.Actions)
+        foreach (ActionDTO actionDto in dto.Actions)
         {
             if (!groups.ContainsKey(actionDto.OwnerId))
                 groups[actionDto.OwnerId] = (new(), new(), new(), new());
 
-            var action = new Action(actionDto.Description, ParseActionType(actionDto.ActionType));
+            Action action = new Action(actionDto.Description, ParseActionType(actionDto.ActionType));
             var (entry, doAct, exit, trans) = groups[actionDto.OwnerId];
 
-            switch (actionDto.ActionType)
+            switch (action.Type)
             {
-                case "ENTRY_ACTION": entry.Add(action); break;
-                case "DO_ACTION": doAct.Add(action); break;
-                case "EXIT_ACTION": exit.Add(action); break;
-                case "TRANSITION_ACTION": trans.Add(action); break;
-            }
+                case ActionType.EntryAction :       entry.Add(action); break;
+                case ActionType.DoAction:           doAct.Add(action); break;
+                case ActionType.ExitAction:         exit.Add(action); break;
+                case ActionType.TransitionAction:   trans.Add(action); break;
+                default: throw new InvalidOperationException($"Unknown action type {action.Type}");
+            } 
         }
 
         return groups;
     }
 
-    private Dictionary<string, State> BuildStates(FSMDTO dto,
-        Dictionary<string, (List<Action> Entry, List<Action> Do, List<Action> Exit, List<Action> Transition)> actions)
+    private Dictionary<string, State> BuildStates(
+        FSMDTO dto,
+        Dictionary<string,
+        (
+            List<Action> Entry,
+            List<Action> Do,
+            List<Action> Exit,
+            List<Action> Transition)> actions
+        )
     {
-        var states = new Dictionary<string, State>();
+        Dictionary<string, State>? states = new Dictionary<string, State>();
 
         foreach (var stateDto in dto.States)
         {
             actions.TryGetValue(stateDto.Id, out var acts);
-            var entry = acts.Entry ?? new();
-            var doAct = acts.Do ?? new();
-            var exit = acts.Exit ?? new();
+            List<Action> entry = acts.Entry ?? new();
+            List<Action> doAct = acts.Do ?? new();
+            List<Action> exit = acts.Exit ?? new();
 
-            State state = stateDto.StateType switch
+            StateType type = ParseStateType(stateDto.StateType);
+
+            State state = type switch
             {
-                "INITIAL" => _director.MakeInitialState(new InitialStateBuilder(), stateDto.Id, stateDto.Name),
-                "FINAL" => _director.MakeFinalState(new FinalStateBuilder(), stateDto.Id, stateDto.Name),
-                "SIMPLE" => _director.MakeSimpleState(new SimpleStateBuilder(), stateDto.Id, stateDto.Name, entry, doAct, exit),
-                "COMPOUND" => _director.MakeCompoundState(new CompoundStateBuilder(), stateDto.Id, stateDto.Name, entry, doAct, exit),
-                _ => throw new InvalidOperationException($"Unknown state type: {stateDto.StateType}")
+                StateType.Initial =>
+                    _director.MakeInitialState(new InitialStateBuilder(), stateDto.Id, stateDto.Name),
+
+                StateType.Final =>
+                    _director.MakeFinalState(new FinalStateBuilder(), stateDto.Id, stateDto.Name),
+
+                StateType.Simple =>
+                    _director.MakeSimpleState(new SimpleStateBuilder(), stateDto.Id, stateDto.Name, entry, doAct, exit),
+
+                StateType.Compound =>
+                    _director.MakeCompoundState(new CompoundStateBuilder(), stateDto.Id, stateDto.Name, entry, doAct, exit),
+
+                _ => throw new InvalidOperationException($"Unknown state type {type}")
             };
 
             states[stateDto.Id] = state;
@@ -107,11 +126,12 @@ public class FSMFactory
                 : null;
 
             actions.TryGetValue(transDto.Id, out var transActs);
-            var effects = transActs.Transition ?? new();
+            List<Action> effects = transActs.Transition ?? new();
 
-            var transition = _director.MakeTransition(
+            Transition transition = _director.MakeTransition(
                 new TransitionBuilder(), transDto.Id,
-                source, destination, trigger, transDto.Guard, effects);
+                source, destination, trigger, transDto.Guard, effects
+                );
 
             transitions.Add(transition);
         }
@@ -119,12 +139,27 @@ public class FSMFactory
         return transitions;
     }
 
-    private static ActionType ParseActionType(string raw) => raw switch
+    private static ActionType ParseActionType(string raw)
     {
-        "ENTRY_ACTION" => ActionType.EntryAction,
-        "DO_ACTION" => ActionType.DoAction,
-        "EXIT_ACTION" => ActionType.ExitAction,
-        "TRANSITION_ACTION" => ActionType.TransitionAction,
-        _ => throw new InvalidOperationException($"Unknown action type: {raw}")
-    };
+        return raw switch
+        {
+            "ENTRY_ACTION" => ActionType.EntryAction,
+            "DO_ACTION" => ActionType.DoAction,
+            "EXIT_ACTION" => ActionType.ExitAction,
+            "TRANSITION_ACTION" => ActionType.TransitionAction,
+            _ => throw new InvalidOperationException($"Unknown action type: {raw}"),
+        };
+    }
+
+    private static StateType ParseStateType(string raw)
+    {
+        return raw switch
+        {
+            "INITIAL" => StateType.Initial,
+            "SIMPLE" => StateType.Simple,
+            "COMPOUND" => StateType.Compound,
+            "FINAL" => StateType.Final,
+            _ => throw new InvalidOperationException($"Unknown state type: {raw}")
+        };
+    }
 }

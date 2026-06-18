@@ -8,12 +8,12 @@ public class FileValidator : IFileValidator
     {
         _errors.Clear();
 
-        var lines = content.Split('\n')
+        List<String> lines = content.Split('\n')
             .Select(l => l.Trim('\r', ' '))
             .Where(l => !string.IsNullOrWhiteSpace(l) && !l.StartsWith('#'))
             .ToList();
 
-        foreach (var line in lines)
+        foreach (string line in lines)
         {
             if (!line.TrimEnd().EndsWith(';'))
             {
@@ -83,8 +83,13 @@ public class FileValidator : IFileValidator
             {
                 var sb = new System.Text.StringBuilder();
                 i++;
-                while (i < line.Length && line[i] != '"') sb.Append(line[i++]);
-                if (i < line.Length) i++;
+
+                while (i < line.Length && line[i] != '"')
+                    sb.Append(line[i++]);
+
+                if (i < line.Length)
+                    i++; 
+
                 tokens.Add(sb.ToString());
             }
             else

@@ -10,5 +10,8 @@ public class SimpleState : State
         IEnumerable<Action> exitActions)
         : base(id, name, entryActions, doActions, exitActions) { }
 
-    public override void Accept(IVisitor visitor) => visitor.Visit(this);
+    public override void Accept(IVisitor visitor)
+    {
+        visitor.Visit(this);
+    }
 }

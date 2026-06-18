@@ -1,5 +1,6 @@
 using FSM.Factory;
 using FSM.FileHandling;
+using FSM.FileHandling.DTO;
 using FSM.Model;
 using FSM.Validators;
 using FSM.Visitors;
@@ -48,7 +49,7 @@ public class FSMApplication
 
     public void ProcessFile(string path, string outputMode = "menu", string pngPath = "output.png")
     {
-        var fsm = LoadFsm(path);
+        FiniteStateMachine? fsm = LoadFsm(path);
         if (fsm is null) return;
 
         var errors = ValidateFsm(fsm);
@@ -84,7 +85,7 @@ public class FSMApplication
     {
         try
         {
-            var dto = _fileHandler.ReadAndInterpret(path);
+            FSMDTO? dto = _fileHandler.ReadAndInterpret(path);
             return _factory.Create(dto);
         }
         catch (Exception ex)

@@ -24,5 +24,5 @@ public abstract class State : IElement
 
     public abstract void Accept(IVisitor visitor);
 
-    public override string ToString() => Name;
+    public override string ToString() { return Name; }
 }

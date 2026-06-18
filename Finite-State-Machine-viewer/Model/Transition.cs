@@ -26,7 +26,10 @@ public class Transition : IElement
         Effects.AddRange(effects);
     }
 
-    public void Accept(IVisitor visitor) => visitor.Visit(this);
+    public void Accept(IVisitor visitor)
+    {
+        visitor.Visit(this);
+    }
 
     public string GetLabel()
     {
@@ -37,5 +40,8 @@ public class Transition : IElement
         return string.Join(" ", parts);
     }
 
-    public override string ToString() => $"{Source.Name} --{GetLabel()}--> {Destination.Name}";
+    public override string ToString()
+    {
+        return $"{Source.Name} --{GetLabel()}--> {Destination.Name}";
+    }
 }

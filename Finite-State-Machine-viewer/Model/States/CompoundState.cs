@@ -13,9 +13,18 @@ public class CompoundState : State
         IEnumerable<Action> exitActions)
         : base(id, name, entryActions, doActions, exitActions) { }
 
-    public void AddChild(State state) => _children.Add(state);
+    public void AddChild(State state)
+    {
+        _children.Add(state);
+    }
 
-    public void RemoveChild(State state) => _children.Remove(state);
+    public void RemoveChild(State state)
+    {
+        _children.Remove(state);
+    }
 
-    public override void Accept(IVisitor visitor) => visitor.Visit(this);
+    public override void Accept(IVisitor visitor)
+    {
+        visitor.Visit(this);
+    }
 }
