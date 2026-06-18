@@ -1,5 +1,6 @@
 using System.Text;
 using FSM.FileHandling.DTO;
+using FSM.Model;
 
 namespace FSM.FileHandling;
 
@@ -54,10 +55,19 @@ public class FileInterpreter : IFileInterpreter
         string parentId = t[2];
         string name = Unquote(t[3]);
         // t[4] == ":"
-        string stateType = t[5];
+        StateType stateType = ParseStateType(t[5]);
 
         return new StateDTO(id, parentId, name, stateType);
     }
+
+    private static StateType ParseStateType(string raw) => raw switch
+    {
+        "INITIAL"  => StateType.Initial,
+        "SIMPLE"   => StateType.Simple,
+        "COMPOUND" => StateType.Compound,
+        "FINAL"    => StateType.Final,
+        _ => throw new FormatException($"Unknown state type: '{raw}'")
+    };
 
     // TRIGGER <id> "<description>";
     private static TriggerDTO ParseTrigger(List<string> t)
@@ -77,10 +87,19 @@ public class FileInterpreter : IFileInterpreter
         string ownerId = t[1];
         string description = Unquote(t[2]);
         // t[3] == ":"
-        string actionType = t[4];
+        ActionType actionType = ParseActionType(t[4]);
 
         return new ActionDTO(ownerId, description, actionType);
     }
+
+    private static ActionType ParseActionType(string raw) => raw switch
+    {
+        "ENTRY_ACTION"      => ActionType.EntryAction,
+        "DO_ACTION"         => ActionType.DoAction,
+        "EXIT_ACTION"       => ActionType.ExitAction,
+        "TRANSITION_ACTION" => ActionType.TransitionAction,
+        _ => throw new FormatException($"Unknown action type: '{raw}'")
+    };
 
     // TRANSITION <id> <src> -> <dst> [<trigger>] ["<guard>"];
     private static TransitionDTO ParseTransition(List<string> t)

@@ -34,10 +34,10 @@ public class FSMFactory
             if (!groups.ContainsKey(actionDto.OwnerId))
                 groups[actionDto.OwnerId] = (new(), new(), new(), new());
 
-            Action action = new Action(actionDto.Description, ParseActionType(actionDto.ActionType));
+            Action action = new Action(actionDto.Description, actionDto.ActionType);
             var (entry, doAct, exit, trans) = groups[actionDto.OwnerId];
 
-            switch (action.Type)
+            switch (actionDto.ActionType)
             {
                 case ActionType.EntryAction :       entry.Add(action); break;
                 case ActionType.DoAction:           doAct.Add(action); break;
@@ -69,9 +69,7 @@ public class FSMFactory
             List<Action> doAct = acts.Do ?? new();
             List<Action> exit = acts.Exit ?? new();
 
-            StateType type = ParseStateType(stateDto.StateType);
-
-            State state = type switch
+            State state = stateDto.StateType switch
             {
                 StateType.Initial =>
                     _director.MakeInitialState(new InitialStateBuilder(), stateDto.Id, stateDto.Name),
@@ -85,7 +83,7 @@ public class FSMFactory
                 StateType.Compound =>
                     _director.MakeCompoundState(new CompoundStateBuilder(), stateDto.Id, stateDto.Name, entry, doAct, exit),
 
-                _ => throw new InvalidOperationException($"Unknown state type {type}")
+                _ => throw new InvalidOperationException($"Unknown state type {stateDto.StateType}")
             };
 
             states[stateDto.Id] = state;
@@ -139,27 +137,4 @@ public class FSMFactory
         return transitions;
     }
 
-    private static ActionType ParseActionType(string raw)
-    {
-        return raw switch
-        {
-            "ENTRY_ACTION" => ActionType.EntryAction,
-            "DO_ACTION" => ActionType.DoAction,
-            "EXIT_ACTION" => ActionType.ExitAction,
-            "TRANSITION_ACTION" => ActionType.TransitionAction,
-            _ => throw new InvalidOperationException($"Unknown action type: {raw}"),
-        };
-    }
-
-    private static StateType ParseStateType(string raw)
-    {
-        return raw switch
-        {
-            "INITIAL" => StateType.Initial,
-            "SIMPLE" => StateType.Simple,
-            "COMPOUND" => StateType.Compound,
-            "FINAL" => StateType.Final,
-            _ => throw new InvalidOperationException($"Unknown state type: {raw}")
-        };
-    }
 }

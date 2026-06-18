@@ -1,3 +1,5 @@
+using FSM.Model;
+
 namespace FSM.FileHandling.DTO;
 
 public class FSMDTO
@@ -9,10 +11,10 @@ public class FSMDTO
     public List<TransitionDTO> Transitions { get; set; } = new();
 }
 
-public record StateDTO(string Id, string ParentId, string Name, string StateType);
+public record StateDTO(string Id, string ParentId, string Name, StateType StateType);
 
 public record TriggerDTO(string Id, string Description);
 
-public record ActionDTO(string OwnerId, string Description, string ActionType);
+public record ActionDTO(string OwnerId, string Description, ActionType ActionType);
 
 public record TransitionDTO(string Id, string SourceId, string DestinationId, string? TriggerId, string? Guard);

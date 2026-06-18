@@ -1,5 +1,6 @@
 using FSM.FileHandling;
 using FSM.FileHandling.DTO;
+using FSM.Model;
 
 namespace FSM.Tests;
 
@@ -27,7 +28,7 @@ TRANSITION t4 powered -> final power_off "";
         var dto = Interpret(content);
 
         Assert.Equal(5, dto.States.Count);
-        Assert.Equal(1, dto.Triggers.Count);
+        Assert.Single(dto.Triggers);
         Assert.Equal(2, dto.Transitions.Count);
     }
 
@@ -92,7 +93,7 @@ TRANSITION t1 on -> on """";
 
         var actions = dto.Actions.Where(a => a.OwnerId == "on").ToList();
         Assert.Equal(2, actions.Count);
-        Assert.Contains(actions, a => a.ActionType == "ENTRY_ACTION");
-        Assert.Contains(actions, a => a.ActionType == "EXIT_ACTION");
+        Assert.Contains(actions, a => a.ActionType == ActionType.EntryAction);
+        Assert.Contains(actions, a => a.ActionType == ActionType.ExitAction);
     }
 }
