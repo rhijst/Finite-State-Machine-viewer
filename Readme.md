@@ -1,4 +1,6 @@
 # Design Patterns - FSM Viewer
+2207534 | Danny van Gasteren
+2197933 | Thijs Teerhuis
 
 ## Creatiepatronen
 
