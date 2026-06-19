@@ -62,7 +62,7 @@ public class FSMFactory
     {
         Dictionary<string, State>? states = new Dictionary<string, State>();
 
-        foreach (var stateDto in dto.States)
+        foreach (StateDTO stateDto in dto.States)
         {
             actions.TryGetValue(stateDto.Id, out var acts);
             List<Action> entry = acts.Entry ?? new();
@@ -94,7 +94,7 @@ public class FSMFactory
 
     private static void SetParentChildRelationships(FSMDTO dto, Dictionary<string, State> states)
     {
-        foreach (var stateDto in dto.States.Where(s => s.ParentId != "_"))
+        foreach (StateDTO stateDto in dto.States.Where(s => s.ParentId != "_"))
         {
             if (!states.TryGetValue(stateDto.ParentId, out var parent))
                 throw new InvalidOperationException($"Parent state '{stateDto.ParentId}' not found for '{stateDto.Id}'.");
@@ -110,7 +110,7 @@ public class FSMFactory
         Dictionary<string, Trigger> triggers,
         Dictionary<string, (List<Action> Entry, List<Action> Do, List<Action> Exit, List<Action> Transition)> actions)
     {
-        var transitions = new List<Transition>();
+        List<Transition> transitions = new List<Transition>();
 
         foreach (var transDto in dto.Transitions)
         {

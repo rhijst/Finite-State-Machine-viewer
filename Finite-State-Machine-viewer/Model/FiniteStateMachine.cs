@@ -16,19 +16,29 @@ public class FiniteStateMachine
         Transitions = transitions.ToList();
     }
 
-    public InitialState? GetInitialState() => States.OfType<InitialState>().FirstOrDefault();
+    public InitialState? GetInitialState()
+    {
+        return States.OfType<InitialState>().FirstOrDefault();
+    }
+    public IEnumerable<State> GetTopLevelStates()
+    {
+        return States.Where(s => !States.OfType<CompoundState>().Any(cs => cs.Children.Contains(s)));
+    }
 
-    public IEnumerable<State> GetTopLevelStates() =>
-        States.Where(s => !States.OfType<CompoundState>().Any(cs => cs.Children.Contains(s)));
+    public IEnumerable<Transition> GetOutgoingTransitions(State state)
+    {
+        return Transitions.Where(t => t.Source == state);
+    }
 
-    public IEnumerable<Transition> GetOutgoingTransitions(State state) =>
-        Transitions.Where(t => t.Source == state);
+    public IEnumerable<Transition> GetIncomingTransitions(State state)
+    {
+        return Transitions.Where(t => t.Destination == state);
+    }
 
-    public IEnumerable<Transition> GetIncomingTransitions(State state) =>
-        Transitions.Where(t => t.Destination == state);
-
-    public CompoundState? GetParent(State state) =>
-        States.OfType<CompoundState>().FirstOrDefault(cs => cs.Children.Contains(state));
+    public CompoundState? GetParent(State state)
+    {
+        return States.OfType<CompoundState>().FirstOrDefault(cs => cs.Children.Contains(state));
+    }
 
     public void Render(IVisitor visitor)
     {
