@@ -1,4 +1,3 @@
-using System.Text;
 using FSM.FileHandling.DTO;
 using FSM.Model;
 
@@ -19,7 +18,7 @@ public class FileInterpreter : IFileInterpreter
 
         foreach (var line in lines)
         {
-            var tokens = Tokenize(line);
+            var tokens = FileTokenizer.Tokenize(line);
             if (tokens.Count == 0) continue;
 
             switch (tokens[0].ToUpperInvariant())
@@ -42,20 +41,17 @@ public class FileInterpreter : IFileInterpreter
         return dto;
     }
 
-    private static string Unquote(string token) =>
-        token.StartsWith('\x01') ? token[1..] : token;
-
     // STATE <id> <parent|_> "<name>" : <type>;
-    private static StateDTO ParseState(List<string> t)
+    private static StateDTO ParseState(List<string> stateTokens)
     {
-        if (t.Count < 6)
-            throw new FormatException($"Invalid STATE: {string.Join(" ", t)}");
+        if (stateTokens.Count < 6)
+            throw new FormatException($"Invalid STATE: {string.Join(" ", stateTokens)}");
 
-        string id = t[1];
-        string parentId = t[2];
-        string name = Unquote(t[3]);
+        string id = stateTokens[1];
+        string parentId = stateTokens[2];
+        string name = FileTokenizer.Unquote(stateTokens[3]);
         // t[4] == ":"
-        StateType stateType = ParseStateType(t[5]);
+        StateType stateType = ParseStateType(stateTokens[5]);
 
         return new StateDTO(id, parentId, name, stateType);
     }
@@ -70,24 +66,24 @@ public class FileInterpreter : IFileInterpreter
     };
 
     // TRIGGER <id> "<description>";
-    private static TriggerDTO ParseTrigger(List<string> t)
+    private static TriggerDTO ParseTrigger(List<string> stateTokens)
     {
-        if (t.Count < 3)
-            throw new FormatException($"Invalid TRIGGER: {string.Join(" ", t)}");
+        if (stateTokens.Count < 3)
+            throw new FormatException($"Invalid TRIGGER: {string.Join(" ", stateTokens)}");
 
-        return new TriggerDTO(t[1], Unquote(t[2]));
+        return new TriggerDTO(stateTokens[1], FileTokenizer.Unquote(stateTokens[2]));
     }
 
     // ACTION <owner_id> "<description>" : <type>;
-    private static ActionDTO ParseAction(List<string> t)
+    private static ActionDTO ParseAction(List<string> stateTokens)
     {
-        if (t.Count < 5)
-            throw new FormatException($"Invalid ACTION: {string.Join(" ", t)}");
+        if (stateTokens.Count < 5)
+            throw new FormatException($"Invalid ACTION: {string.Join(" ", stateTokens)}");
 
-        string ownerId = t[1];
-        string description = Unquote(t[2]);
+        string ownerId = stateTokens[1];
+        string description = FileTokenizer.Unquote(stateTokens[2]);
         // t[3] == ":"
-        ActionType actionType = ParseActionType(t[4]);
+        ActionType actionType = ParseActionType(stateTokens[4]);
 
         return new ActionDTO(ownerId, description, actionType);
     }
@@ -102,37 +98,34 @@ public class FileInterpreter : IFileInterpreter
     };
 
     // TRANSITION <id> <src> -> <dst> [<trigger>] ["<guard>"];
-    private static TransitionDTO ParseTransition(List<string> t)
+    private static TransitionDTO ParseTransition(List<string> stateTokens)
     {
-        if (t.Count < 5)
-            throw new FormatException($"Invalid TRANSITION: {string.Join(" ", t)}");
+        if (stateTokens.Count < 5)
+            throw new FormatException($"Invalid TRANSITION: {string.Join(" ", stateTokens)}");
 
-        string id = t[1];
-        string sourceId = t[2];
+        string id = stateTokens[1];
+        string sourceId = stateTokens[2];
         // t[3] == "->"
-        string destinationId = t[4];
+        string destinationId = stateTokens[4];
 
         string? triggerId = null;
         string? guard = null;
 
-        int idx = 5;
-        if (idx < t.Count)
+        int i = 5;
+        if (i < stateTokens.Count)
         {
-            // Marked quoted strings have a special marker — see tokenizer
-            if (t[idx].StartsWith('\x01'))
+            if (FileTokenizer.IsQuoted(stateTokens[i]))
             {
-                // It's a quoted string (guard), no trigger
-                guard = t[idx][1..];
+                guard = FileTokenizer.Unquote(stateTokens[i]);
                 if (guard.Length == 0) guard = null;
             }
             else
             {
-                // It's a trigger identifier
-                triggerId = t[idx];
-                idx++;
-                if (idx < t.Count && t[idx].StartsWith('\x01'))
+                triggerId = stateTokens[i];
+                i++;
+                if (i < stateTokens.Count && FileTokenizer.IsQuoted(stateTokens[i]))
                 {
-                    guard = t[idx][1..];
+                    guard = FileTokenizer.Unquote(stateTokens[i]);
                     if (guard.Length == 0) guard = null;
                 }
             }
@@ -141,34 +134,4 @@ public class FileInterpreter : IFileInterpreter
         return new TransitionDTO(id, sourceId, destinationId, triggerId, guard);
     }
 
-    // Tokenizer that marks quoted strings with \x01 prefix to distinguish from identifiers
-    private static List<string> Tokenize(string line)
-    {
-        var tokens = new List<string>();
-        int i = 0;
-        while (i < line.Length)
-        {
-            if (char.IsWhiteSpace(line[i])) { i++; continue; }
-            if (line[i] == '#') break;
-            if (line[i] == ';') { i++; break; }
-
-            if (line[i] == '"')
-            {
-                // Quoted string: mark with \x01 prefix, content without quotes
-                var sb = new StringBuilder("\x01");
-                i++;
-                while (i < line.Length && line[i] != '"') sb.Append(line[i++]);
-                if (i < line.Length) i++; // skip closing quote
-                tokens.Add(sb.ToString());
-            }
-            else
-            {
-                var sb = new StringBuilder();
-                while (i < line.Length && !char.IsWhiteSpace(line[i]) && line[i] != ';' && line[i] != '"')
-                    sb.Append(line[i++]);
-                if (sb.Length > 0) tokens.Add(sb.ToString());
-            }
-        }
-        return tokens;
-    }
 }
