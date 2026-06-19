@@ -7,14 +7,17 @@ public class UnreachableStateValidator : IFSMValidator
 {
     public ValidationResult Validate(FiniteStateMachine fsm)
     {
-        var result = new ValidationResult();
-        var initial = fsm.GetInitialState();
-        if (initial is null) return result;
-
-        var reachable = new HashSet<State>();
+        ValidationResult result = new ValidationResult();
+        InitialState? initial = fsm.GetInitialState();
+        if (initial is null)
+        {
+            result.AddError("No initial state found");
+            return result;
+        }
+        HashSet<State> reachable = new HashSet<State>();
         Traverse(initial, fsm, reachable);
 
-        foreach (var state in fsm.States)
+        foreach (State state in fsm.States)
         {
             if (state is InitialState) continue;
             if (!reachable.Contains(state))
@@ -29,7 +32,7 @@ public class UnreachableStateValidator : IFSMValidator
         if (!visited.Add(current)) return;
 
         // Entering a child makes its parent compound state reachable too
-        var parent = fsm.GetParent(current);
+        CompoundState? parent = fsm.GetParent(current);
         if (parent is not null) Traverse(parent, fsm, visited);
 
         // Entering a compound state makes all its children reachable

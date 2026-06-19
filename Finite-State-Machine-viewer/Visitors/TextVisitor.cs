@@ -31,7 +31,7 @@ public class TextVisitor : IVisitor
 
     public void Visit(InitialState state)
     {
-        _output.WriteLine($"{Pad()}O Initial state ({state.Name})");
+        _output.WriteLine($"{Padding()}O Initial state ({state.Name})");
         _output.WriteLine();
         WriteTransitions(state, trailingBlankLine: true);
     }
@@ -39,13 +39,13 @@ public class TextVisitor : IVisitor
     public void Visit(FinalState state)
     {
         _output.WriteLine();
-        _output.WriteLine($"{Pad()}(O) Final state ({state.Name})");
+        _output.WriteLine($"{Padding()}(O) Final state ({state.Name})");
     }
 
     public void Visit(SimpleState state)
     {
         WriteSeparator('-');
-        _output.WriteLine($"{Pad()}| {state.Name}");
+        _output.WriteLine($"{Padding()}| {state.Name}");
         WriteSeparator('-');
         WriteActions(state);
         WriteTransitions(state, trailingBlankLine: true);
@@ -54,7 +54,7 @@ public class TextVisitor : IVisitor
     public void Visit(CompoundState state)
     {
         WriteSeparator('=');
-        _output.WriteLine($"{Pad()}|| Compound state: {state.Name}");
+        _output.WriteLine($"{Padding()}|| Compound state: {state.Name}");
         WriteSeparator('-');
         WriteActions(state);
         _output.WriteLine();
@@ -71,7 +71,7 @@ public class TextVisitor : IVisitor
 
     public void Visit(Transition transition)
     {
-        _output.WriteLine($"{Pad()}---{transition.GetLabel()}---> {transition.Destination.Name}");
+        _output.WriteLine($"{Padding()}---{transition.GetLabel()}---> {transition.Destination.Name}");
     }
 
     private void WriteTransitions(State state, bool trailingBlankLine)
@@ -87,18 +87,24 @@ public class TextVisitor : IVisitor
     private void WriteActions(State state)
     {
         foreach (var a in state.EntryActions)
-            _output.WriteLine($"{Pad()}| On Entry / {a.Description}");
+            _output.WriteLine($"{Padding()}| On Entry / {a.Description}");
         foreach (var a in state.DoActions)
-            _output.WriteLine($"{Pad()}| Do / {a.Description}");
+            _output.WriteLine($"{Padding()}| Do / {a.Description}");
         foreach (var a in state.ExitActions)
-            _output.WriteLine($"{Pad()}| On Exit / {a.Description}");
+            _output.WriteLine($"{Padding()}| On Exit / {a.Description}");
 
         if (state.EntryActions.Any() || state.DoActions.Any() || state.ExitActions.Any())
             WriteSeparator('-');
     }
 
-    private void WriteSeparator(char ch) =>
-        _output.WriteLine(Pad() + new string(ch, SeparatorWidth));
+    private void WriteSeparator(char ch)
+    {
+        _output.WriteLine(Padding() + new string(ch, SeparatorWidth));
+    } 
+        
 
-    private string Pad() => new(' ', _indent * 2);
+    private string Padding()
+    {
+        return new(' ', _indent * 2);
+    }
 }

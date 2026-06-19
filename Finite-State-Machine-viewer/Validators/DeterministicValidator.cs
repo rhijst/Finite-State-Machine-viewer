@@ -23,6 +23,7 @@ public class DeterministicValidator : IFSMValidator
             }
 
             // Two transitions with same trigger AND same guard are non-deterministic
+            // Grouped by trigger
             var groups = outgoing.GroupBy(t => t.Trigger?.Id ?? string.Empty);
             foreach (var group in groups)
             {
