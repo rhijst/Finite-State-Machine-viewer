@@ -6,7 +6,7 @@
 **Locatie:** `Builders/`
 
 Elk state-type en `Transition` heeft een eigen concrete builder die stapsgewijs het object opbouwt.  
-De `FSMDirector` orkestreert de bouw: hij accepteert een specifieke builder en configureert deze met de gegeven data, waarna `Build()` het eindproduct oplevert.
+De `FSMDirector` organiseert de bouw: hij accepteert een specifieke builder en configureert deze met de gegeven data, waarna `Build()` het eindproduct oplevert.
 
 ```
 StateBuilder<TState,TBuilder>  (abstract)
@@ -104,3 +104,21 @@ Door afhankelijkheidsinjectie (constructor) kunnen alle drie onafhankelijk worde
 - **Applicatielaag:** `FSMApplication.cs`, `Program.cs` — koppelt alles samen
 
 De presentatielaag kan volledig worden vervangen door een nieuwe `IVisitor`-implementatie toe te voegen zonder één regel modelcode te wijzigen.
+
+---
+
+## Extra
+
+### Grafische weergave (PNG)
+**Locatie:** `Visitors/GraphicalVisitor.cs`
+
+`GraphicalVisitor` implementeert `IVisitor` en genereert een PNG-bestand via `System.Drawing.Common`. De visitor tekent:
+
+- `SimpleState` als lichtblauwe rechthoek met naam en acties (`entry/`, `do/`, `exit/`)
+- `CompoundState` als gestippeld oranje kader dat zijn kinderen omsluit
+- `InitialState` als gevulde cirkel, `FinalState` als dubbele cirkel
+- Transities als groene pijlen met een label (trigger en/of guard) op het midden van de pijl
+
+Voorbeelduitvoer is te vinden in `Test-FSMs/example_lamp.png` en `Test-FSMs/example_user_account.png`.
+
+**Verband met Visitor:** `GraphicalVisitor` is een directe tweede implementatie van `IVisitor` naast `TextVisitor`. Het model hoeft hiervoor niets te weten van PNG of `System.Drawing` — runtime wisselen tussen tekst- en grafische weergave gebeurt door een andere visitor mee te geven aan `fsm.Render(IVisitor)`, zonder enige modelwijziging.
