@@ -7,7 +7,7 @@ namespace FSM.Tests;
 public class ValidatorTests
 {
     private static readonly string TestDir =
-        @"C:\Users\Dannyy\Downloads\Test FSMs V2\Test FSMs";
+        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TestFSMs");
 
     private static FSM.Model.FiniteStateMachine Load(string filename)
     {

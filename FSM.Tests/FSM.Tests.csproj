@@ -24,4 +24,10 @@
     <ProjectReference Include="..\Finite-State-Machine-viewer\Finite-State-Machine-viewer.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\Test-FSMs\*.fsm" CopyToOutputDirectory="PreserveNewest">
+      <Link>TestFSMs\%(Filename)%(Extension)</Link>
+    </None>
+  </ItemGroup>
+
 </Project>

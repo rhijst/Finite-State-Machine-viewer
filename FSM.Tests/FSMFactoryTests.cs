@@ -6,11 +6,14 @@ namespace FSM.Tests;
 
 public class FSMFactoryTests
 {
+    private static readonly string TestDir =
+        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TestFSMs");
+
     private static readonly string LampFsmPath =
-        @"C:\Users\Dannyy\Downloads\Test FSMs V2\Test FSMs\example_lamp.fsm";
+        Path.Combine(TestDir, "example_lamp.fsm");
 
     private static readonly string UserAccountPath =
-        @"C:\Users\Dannyy\Downloads\Test FSMs V2\Test FSMs\example_user_account.fsm";
+        Path.Combine(TestDir, "example_user_account.fsm");
 
     private static FSM.Model.FiniteStateMachine LoadFromFile(string path)
     {

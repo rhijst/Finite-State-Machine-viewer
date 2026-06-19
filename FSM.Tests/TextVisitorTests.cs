@@ -8,7 +8,7 @@ public class TextVisitorTests
 {
     private static FSM.Model.FiniteStateMachine LoadLamp()
     {
-        var path = @"C:\Users\Dannyy\Downloads\Test FSMs V2\Test FSMs\example_lamp.fsm";
+        var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TestFSMs", "example_lamp.fsm");
         var handler = new FileHandler(new TextFileReader(), new FileInterpreter(), new FileValidator());
         var dto = handler.ReadAndInterpret(path);
         return new FSMFactory().Create(dto);
