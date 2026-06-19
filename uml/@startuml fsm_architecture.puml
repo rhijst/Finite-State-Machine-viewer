@@ -1,0 +1,409 @@
+@startuml fsm_architecture
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+hide empty members
+
+' ===================== APP =====================
+package "FSM (App)" {
+  class Program {
+    - Main(args: string[])
+  }
+
+  class FSMApplication {
+    - _fileHandler: FileHandler
+    - _factory: FSMFactory
+    - _validators: IReadOnlyList<IFSMValidator>
+    + Start()
+    + ProcessFile(path, mode, pngPath)
+    - LoadFsm(path): FiniteStateMachine?
+    - ValidateFsm(fsm): List<string>
+    - ShowMenu(fsm)
+  }
+
+  Program --> FSMApplication
+}
+
+' ===================== FILEHANDLING =====================
+package "FSM.FileHandling" {
+  class FileHandler {
+    - _reader: IFileReader
+    - _interpreter: IFileInterpreter
+    - _validator: IFileValidator
+    + LoadFile(path): CustomFile
+    + ValidateFileContent(content): bool
+    + GetValidationErrors(): IEnumerable<string>
+    + InterpretFileContent(file): FSMDTO
+    + ReadAndInterpret(path): FSMDTO
+  }
+
+  class CustomFile {
+    + Content: string
+    + Path: string
+    + Extension: string
+  }
+
+  interface IFileReader {
+    + Read(path): CustomFile
+  }
+
+  class TextFileReader implements IFileReader {
+    + Read(path): CustomFile
+  }
+
+  interface IFileInterpreter {
+    + Interpret(file): FSMDTO
+  }
+
+  class FileInterpreter implements IFileInterpreter {
+    + Interpret(file): FSMDTO
+    - ParseState(tokens): StateDTO
+    - ParseTrigger(tokens): TriggerDTO
+    - ParseAction(tokens): ActionDTO
+    - ParseTransition(tokens): TransitionDTO
+  }
+
+  interface IFileValidator {
+    + Validate(content): bool
+    + GetErrors(): IEnumerable<string>
+  }
+
+  class FileValidator implements IFileValidator {
+    - _errors: List<string>
+    + Validate(content): bool
+    + GetErrors(): IEnumerable<string>
+    - ValidateStateLine(line)
+    - ValidateTriggerLine(line)
+    - ValidateActionLine(line)
+    - ValidateTransitionLine(line)
+  }
+
+  class FileTokenizer << (S,gray) static >> {
+    + {static} Tokenize(line): List<string>
+    + {static} IsQuoted(token): bool
+    + {static} Unquote(token): string
+  }
+
+  FileHandler o-- IFileReader
+  FileHandler o-- IFileInterpreter
+  FileHandler o-- IFileValidator
+  TextFileReader ..> CustomFile : creates
+  FileInterpreter ..> CustomFile : reads
+  FileInterpreter ..> FileTokenizer : uses
+  FileValidator ..> FileTokenizer : uses
+}
+
+' ===================== DTO =====================
+package "FSM.FileHandling.DTO" {
+  class FSMDTO {
+    + Name: string
+    + States: List<StateDTO>
+    + Triggers: List<TriggerDTO>
+    + Actions: List<ActionDTO>
+    + Transitions: List<TransitionDTO>
+  }
+
+  class StateDTO << record >> {
+    + Id: string
+    + ParentId: string
+    + Name: string
+    + StateType: StateType
+  }
+
+  class TriggerDTO << record >> {
+    + Id: string
+    + Description: string
+  }
+
+  class ActionDTO << record >> {
+    + OwnerId: string
+    + Description: string
+    + ActionType: ActionType
+  }
+
+  class TransitionDTO << record >> {
+    + Id: string
+    + SourceId: string
+    + DestinationId: string
+    + TriggerId: string?
+    + Guard: string?
+  }
+
+  FSMDTO *-- StateDTO
+  FSMDTO *-- TriggerDTO
+  FSMDTO *-- ActionDTO
+  FSMDTO *-- TransitionDTO
+
+  FileInterpreter ..> FSMDTO : produces
+}
+
+' ===================== BUILDERS =====================
+package "FSM.Builders" {
+  abstract class "StateBuilder<TState, TBuilder>" as StateBuilder {
+    # _id: string
+    # _name: string
+    # _entryActions: List<Action>
+    # _doActions: List<Action>
+    # _exitActions: List<Action>
+    + WithId(id): TBuilder
+    + WithName(name): TBuilder
+    + AddEntryAction(action): TBuilder
+    + AddDoAction(action): TBuilder
+    + AddExitAction(action): TBuilder
+    + {abstract} Build(): TState
+  }
+
+  class InitialStateBuilder extends StateBuilder {
+    + Build(): InitialState
+  }
+
+  class FinalStateBuilder extends StateBuilder {
+    + Build(): FinalState
+  }
+
+  class SimpleStateBuilder extends StateBuilder {
+    + Build(): SimpleState
+  }
+
+  class CompoundStateBuilder extends StateBuilder {
+    + Build(): CompoundState
+  }
+
+  class TransitionBuilder {
+    - _id: string
+    - _source: State?
+    - _destination: State?
+    - _trigger: Trigger?
+    - _guard: string?
+    - _effects: List<Action>
+    + WithId(id): TransitionBuilder
+    + WithSource(source): TransitionBuilder
+    + WithDestination(destination): TransitionBuilder
+    + WithTrigger(trigger): TransitionBuilder
+    + WithGuard(guard): TransitionBuilder
+    + AddEffect(effect): TransitionBuilder
+    + Build(): Transition
+  }
+
+  class FSMDirector {
+    + MakeInitialState(builder, id, name): InitialState
+    + MakeFinalState(builder, id, name): FinalState
+    + MakeSimpleState(builder, id, name, entry, do, exit): SimpleState
+    + MakeCompoundState(builder, id, name, entry, do, exit): CompoundState
+    + MakeTransition(builder, id, src, dst, trigger, guard, effects): Transition
+  }
+
+  FSMDirector ..> StateBuilder : directs
+  FSMDirector ..> TransitionBuilder : directs
+}
+
+' ===================== FACTORY =====================
+package "FSM.Factory" {
+  class FSMFactory {
+    - _director: FSMDirector
+    + Create(dto: FSMDTO): FiniteStateMachine
+    - GroupActions(dto): Dictionary<...>
+    - BuildStates(dto, actions): Dictionary<string, State>
+    - SetParentChildRelationships(dto, states)
+    - BuildTransitions(dto, states, triggers, actions): List<Transition>
+  }
+
+  FSMFactory ..> FSMDirector : uses
+  FSMFactory ..> FSMDTO : consumes
+}
+
+' ===================== MODEL =====================
+package "FSM.Model" {
+  interface IElement {
+    + Accept(visitor: IVisitor)
+  }
+
+  class FiniteStateMachine {
+    + Name: string
+    + States: IReadOnlyList<State>
+    + Transitions: IReadOnlyList<Transition>
+    + GetInitialState(): InitialState?
+    + GetTopLevelStates(): IEnumerable<State>
+    + GetOutgoingTransitions(state): IEnumerable<Transition>
+    + GetIncomingTransitions(state): IEnumerable<Transition>
+    + GetParent(state): CompoundState?
+    + Render(visitor: IVisitor)
+  }
+
+  class Transition implements IElement {
+    + Id: string
+    + Source: State
+    + Destination: State
+    + Trigger: Trigger?
+    + Guard: string?
+    + Effects: List<Action>
+    + IsAutomatic: bool
+    + Accept(visitor)
+    + GetLabel(): string
+  }
+
+  class Trigger {
+    + Id: string
+    + Description: string
+  }
+
+  class Action {
+    + Description: string
+    + Type: ActionType
+  }
+
+  enum ActionType {
+    EntryAction
+    DoAction
+    ExitAction
+    TransitionAction
+  }
+
+  enum StateType {
+    Initial
+    Simple
+    Compound
+    Final
+  }
+
+  FiniteStateMachine o-- "*" State
+  FiniteStateMachine o-- "*" Transition
+  Transition o-- "0..1" Trigger
+  Transition o-- "*" Action
+  Transition --> "1" State : Source
+  Transition --> "1" State : Destination
+  Action *-- ActionType
+}
+
+' ===================== MODEL.STATES =====================
+package "FSM.Model.States" {
+  abstract class State implements IElement {
+    + Id: string
+    + Name: string
+    + EntryActions: List<Action>
+    + DoActions: List<Action>
+    + ExitActions: List<Action>
+    + {abstract} Accept(visitor: IVisitor)
+  }
+
+  class InitialState extends State {
+    + Accept(visitor)
+  }
+
+  class FinalState extends State {
+    + Accept(visitor)
+  }
+
+  class SimpleState extends State {
+    + Accept(visitor)
+  }
+
+  class CompoundState extends State {
+    + Children: IReadOnlyList<State>
+    + AddChild(state)
+    + RemoveChild(state)
+    + Accept(visitor)
+  }
+
+  CompoundState o-- "*" State : Children
+}
+
+' ===================== VALIDATORS =====================
+package "FSM.Validators" {
+  interface IFSMValidator {
+    + Validate(fsm): ValidationResult
+  }
+
+  class ValidationResult {
+    - _errors: List<string>
+    + IsValid: bool
+    + Errors: IReadOnlyList<string>
+    + AddError(message)
+    + {static} Ok(): ValidationResult
+    + {static} Fail(message): ValidationResult
+  }
+
+  class DeterministicValidator implements IFSMValidator {
+    + Validate(fsm): ValidationResult
+  }
+
+  class InitialFinalStateValidator implements IFSMValidator {
+    + Validate(fsm): ValidationResult
+  }
+
+  class CompoundTransitionValidator implements IFSMValidator {
+    + Validate(fsm): ValidationResult
+  }
+
+  class UnreachableStateValidator implements IFSMValidator {
+    + Validate(fsm): ValidationResult
+    - Traverse(current, fsm, visited)
+  }
+
+  IFSMValidator ..> ValidationResult : returns
+  IFSMValidator ..> FiniteStateMachine : validates
+}
+
+' ===================== VISITORS =====================
+package "FSM.Visitors" {
+  interface IVisitor {
+    + BeginFsm(fsm)
+    + EndFsm(fsm)
+    + Visit(state: InitialState)
+    + Visit(state: FinalState)
+    + Visit(state: SimpleState)
+    + Visit(state: CompoundState)
+    + Visit(transition: Transition)
+  }
+
+  class TextVisitor implements IVisitor {
+    - _output: TextWriter
+    - _fsm: FiniteStateMachine?
+    - _indent: int
+    + BeginFsm(fsm)
+    + EndFsm(fsm)
+    + Visit(state: InitialState)
+    + Visit(state: FinalState)
+    + Visit(state: SimpleState)
+    + Visit(state: CompoundState)
+    + Visit(transition: Transition)
+    - WriteTransitions(state, trailingBlankLine)
+    - WriteActions(state)
+    - WriteSeparator(ch)
+    - Padding(): string
+  }
+
+  class GraphicalVisitor implements IVisitor {
+    - _outputPath: string
+    - _stateBounds: Dictionary<State, Rectangle>
+    - _bitmap: Bitmap?
+    - _g: Graphics?
+    - _stateIndex: int
+    + BeginFsm(fsm)
+    + EndFsm(fsm)
+    + Visit(state: InitialState)
+    + Visit(state: FinalState)
+    + Visit(state: SimpleState)
+    + Visit(state: CompoundState)
+    - DrawTransitions(fsm)
+    - DrawLabel(text, font, start, end)
+    - DrawBasicState(bounds, name, brush, isInitial, isFinal)
+    - {static} BuildActionsText(state): List<string>
+  }
+
+  IVisitor ..> State : visits
+  IVisitor ..> Transition : visits
+}
+
+' ===================== CROSS-PACKAGE LINKS =====================
+FSMApplication o-- FileHandler
+FSMApplication o-- FSMFactory
+FSMApplication o-- IFSMValidator
+FSMApplication ..> TextVisitor : uses
+FSMApplication ..> GraphicalVisitor : uses
+
+FSMFactory ..> FiniteStateMachine : creates
+' State ..> IVisitor : Accept(visitor)
+FiniteStateMachine ..> IVisitor : Render(visitor)
+
+@enduml
