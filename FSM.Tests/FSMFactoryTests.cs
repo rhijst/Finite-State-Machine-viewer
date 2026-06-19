@@ -25,9 +25,13 @@ public class FSMFactoryTests
     [Fact]
     public void Create_LampFsm_BuildsCompoundStateWithChildren()
     {
+        // Arrange
         var fsm = LoadFromFile(LampFsmPath);
 
+        // Act
         var compound = fsm.States.OfType<CompoundState>().Single();
+
+        // Assert
         Assert.Equal("Powered up", compound.Name);
         Assert.Equal(2, compound.Children.Count);
     }
@@ -35,9 +39,13 @@ public class FSMFactoryTests
     [Fact]
     public void Create_LampFsm_SetsTransitionEffects()
     {
+        // Arrange
         var fsm = LoadFromFile(LampFsmPath);
 
+        // Act
         var t2 = fsm.Transitions.Single(t => t.Id == "t2");
+
+        // Assert
         Assert.Single(t2.Effects);
         Assert.Equal("reset off timer", t2.Effects[0].Description);
     }
@@ -45,9 +53,13 @@ public class FSMFactoryTests
     [Fact]
     public void Create_LampFsm_SetsEntryAndExitActionsOnSimpleState()
     {
+        // Arrange
         var fsm = LoadFromFile(LampFsmPath);
 
+        // Act
         var onState = fsm.States.OfType<SimpleState>().Single(s => s.Name == "Lamp is on");
+
+        // Assert
         Assert.Single(onState.EntryActions);
         Assert.Single(onState.ExitActions);
     }
@@ -55,19 +67,27 @@ public class FSMFactoryTests
     [Fact]
     public void Create_UserAccount_BuildsNestedCompoundStates()
     {
+        // Arrange
         var fsm = LoadFromFile(UserAccountPath);
 
+        // Act
         var created = fsm.States.OfType<CompoundState>().Single(s => s.Name == "Created");
         var inactive = created.Children.OfType<CompoundState>().SingleOrDefault(s => s.Name == "Inactive");
+
+        // Assert
         Assert.NotNull(inactive);
     }
 
     [Fact]
     public void Create_UserAccount_TopLevelStatesDoNotIncludeNested()
     {
+        // Arrange
         var fsm = LoadFromFile(UserAccountPath);
 
+        // Act
         var topLevel = fsm.GetTopLevelStates().ToList();
+
+        // Assert
         Assert.DoesNotContain(topLevel, s => s.Name == "Unverified");
         Assert.DoesNotContain(topLevel, s => s.Name == "Verified");
     }
